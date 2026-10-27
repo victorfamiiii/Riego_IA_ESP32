@@ -1,0 +1,17 @@
+tunnel: 
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  - hostname: 
+    # Apunta a nginx para que el proxy y las reglas /app/ funcionen
+    service: https://nginx:443
+
+  # Catchall (obligatorio al final)
+  - service: http_status:404
+
+# Opciones de la conexión origin (validación TLS/SNI)
+originRequest:
+  originServerName: 
+  # Debe apuntar al PEM del CA que firma el Origin Certificate (Cloudflare Origin CA root)
+  # Se monta en el contenedor en /etc/cloudflared/ssl/ según docker-compose.yml
+  caPool: /etc/cloudflared/ssl/cloudflare-origin-ca.pem

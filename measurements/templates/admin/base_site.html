@@ -1,0 +1,59 @@
+{% extends "admin/base.html" %}
+
+{% load static %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    <link rel="stylesheet" type="text/css" href="{% static 'admin/css/custom_admin.css' %}">
+{% endblock %}
+
+{% block branding %}
+    <h1 id="site-name">
+        <a href="{% url 'admin:index' %}">
+            🌱 Sistema de Riego Inteligente
+        </a>
+    </h1>
+
+
+{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Crear el botón de toggle
+            const themeToggle = document.createElement('button');
+            themeToggle.id = 'theme-toggle';
+            themeToggle.innerHTML = '🌙';
+            themeToggle.setAttribute('aria-label', 'Cambiar tema');
+            themeToggle.title = 'Cambiar entre modo claro y oscuro';
+            document.body.appendChild(themeToggle);
+
+            // Cargar el tema guardado
+            const savedTheme = localStorage.getItem('admin-theme') || 'dark';
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-mode');
+                themeToggle.innerHTML = '☀️';
+            }
+
+            // Toggle del tema
+            themeToggle.addEventListener('click', function() {
+                document.body.classList.toggle('light-mode');
+                
+                if (document.body.classList.contains('light-mode')) {
+                    themeToggle.innerHTML = '☀️';
+                    localStorage.setItem('admin-theme', 'light');
+                } else {
+                    themeToggle.innerHTML = '🌙';
+                    localStorage.setItem('admin-theme', 'dark');
+                }
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block footer %}
+    <div style="text-align: center; padding: 10px; color: #999;">
+        © 2025 Sistema de Riego Inteligente - TFG
+    </div>
+{% endblock %}

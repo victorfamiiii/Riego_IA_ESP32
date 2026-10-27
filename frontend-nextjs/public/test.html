@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test de APIs</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-card {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #22c55e; }
+        .error { color: #ef4444; }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test de APIs - Dashboard Next.js</h1>
+    
+    <div class="test-card">
+        <h2>Test 1: API Stats</h2>
+        <button onclick="testStats()">🔍 Probar /api/measurements/stats</button>
+        <div id="stats-result"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>Test 2: API History</h2>
+        <button onclick="testHistory()">🔍 Probar /api/measurements/history</button>
+        <div id="history-result"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>Test 3: Navegación al Dashboard</h2>
+        <button onclick="goToDashboard()">🚀 Ir al Dashboard</button>
+    </div>
+
+    <script>
+        async function testStats() {
+            const resultDiv = document.getElementById('stats-result');
+            resultDiv.innerHTML = '<p>⏳ Cargando...</p>';
+            
+            try {
+                const response = await fetch('/api/measurements/stats', {
+                    cache: 'no-store'
+                });
+                
+                console.log('Stats Response:', response);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Stats Data:', data);
+                
+                resultDiv.innerHTML = `
+                    <p class="success">✅ SUCCESS - HTTP ${response.status}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                console.error('Stats Error:', error);
+                resultDiv.innerHTML = `
+                    <p class="error">❌ ERROR</p>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+
+        async function testHistory() {
+            const resultDiv = document.getElementById('history-result');
+            resultDiv.innerHTML = '<p>⏳ Cargando...</p>';
+            
+            try {
+                const response = await fetch('/api/measurements/history', {
+                    cache: 'no-store'
+                });
+                
+                console.log('History Response:', response);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('History Data:', data);
+                
+                resultDiv.innerHTML = `
+                    <p class="success">✅ SUCCESS - HTTP ${response.status}</p>
+                    <p>Total de mediciones: ${data.length}</p>
+                    <pre>${JSON.stringify(data.slice(0, 3), null, 2)}
+... (${data.length - 3} más)</pre>
+                `;
+            } catch (error) {
+                console.error('History Error:', error);
+                resultDiv.innerHTML = `
+                    <p class="error">❌ ERROR</p>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+
+        function goToDashboard() {
+            window.location.href = '/';
+        }
+
+        // Limpiar caché del navegador
+        if ('caches' in window) {
+            caches.keys().then(names => {
+                names.forEach(name => {
+                    caches.delete(name);
+                });
+            });
+        }
+    </script>
+</body>
+</html>

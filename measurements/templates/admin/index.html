@@ -1,0 +1,63 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+    {{ block.super }}
+    
+    <!-- Dashboard de Estadísticas -->
+    <div class="stats-grid">
+        <div class="stat-card temp">
+            <span class="icon">🌡️</span>
+            <h3>Temperatura Promedio</h3>
+            <div class="value" id="avg-temp">
+                <div class="spinner"></div>
+            </div>
+        </div>
+        
+        <div class="stat-card humidity">
+            <span class="icon">💧</span>
+            <h3>Humedad Promedio</h3>
+            <div class="value" id="avg-humidity">
+                <div class="spinner"></div>
+            </div>
+        </div>
+        
+        <div class="stat-card total">
+            <span class="icon">📊</span>
+            <h3>Total de Mediciones</h3>
+            <div class="value" id="total-measurements">
+                <div class="spinner"></div>
+            </div>
+        </div>
+        
+        <div class="stat-card recent">
+            <span class="icon">📅</span>
+            <h3>Últimas 24 Horas</h3>
+            <div class="value" id="recent-measurements">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Cargar estadísticas desde la API
+        fetch('/api/measurements/stats/')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('avg-temp').innerHTML = 
+                    `${data.avg_temperatura.toFixed(1)} <span class="unit">°C</span>`;
+                document.getElementById('avg-humidity').innerHTML = 
+                    `${data.avg_humedad.toFixed(1)} <span class="unit">%</span>`;
+                document.getElementById('total-measurements').innerHTML = 
+                    `${data.total_mediciones}`;
+                document.getElementById('recent-measurements').innerHTML = 
+                    `${data.mediciones_24h}`;
+            })
+            .catch(error => {
+                console.error('Error cargando estadísticas:', error);
+                document.querySelectorAll('.spinner').forEach(el => {
+                    el.parentElement.innerHTML = '<span style="color: red;">Error</span>';
+                });
+            });
+    </script>
+{% endblock %}

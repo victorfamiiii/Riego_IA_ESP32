@@ -1,0 +1,13 @@
+# ACL Mosquitto — Control de acceso por usuario
+#
+# bridge (Django mqtt-bridge): acceso de lectura/escritura total sobre topics esp32
+user bridge
+topic readwrite esp32/#
+topic read $SYS/#
+
+# esp32 (dispositivos físicos): solo sus propios topics
+user esp32
+topic write esp32/+/telemetry/#
+topic write esp32/+/notifications
+topic write esp32/+/commands/request
+topic read  esp32/+/commands/response

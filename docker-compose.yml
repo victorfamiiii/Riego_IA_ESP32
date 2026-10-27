@@ -1,0 +1,255 @@
+# version estable
+services:
+
+  mqtt:
+    image: eclipse-mosquitto:2
+    container_name: esp32-mqtt
+    user: "root"
+    restart: always
+    ports:
+      - "8883:8883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/acl:/mosquitto/config/acl:ro
+      - ./mosquitto/docker-entrypoint.sh:/docker-entrypoint.sh:ro
+      - ./certs:/mosquitto/certs:ro
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+    environment:
+      MQTT_ESP32_USER: ${MQTT_ESP32_USER:-esp32}
+      MQTT_ESP32_PASSWORD: ${MQTT_ESP32_PASSWORD}
+      MQTT_BRIDGE_USER: ${MQTT_BRIDGE_USER:-bridge}
+      MQTT_BRIDGE_PASSWORD: ${MQTT_BRIDGE_PASSWORD}
+    entrypoint: ["/bin/sh", "/docker-entrypoint.sh"]
+    networks:
+      - esp32-network
+    healthcheck:
+      test: ["NONE"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  db:
+    image: postgres:15
+    container_name: esp32-db
+    restart: always
+    environment:
+      POSTGRES_USER: victor
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-root}
+      POSTGRES_DB: ${POSTGRES_DB:-esp32db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - esp32-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  web:
+    build:
+      context: .
+      target: backend
+    container_name: esp32-web
+    expose:
+      - "8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-False}
+      SECRET_KEY: ${DJANGO_SECRET_KEY}
+      POSTGRES_DB: ${POSTGRES_DB:-esp32db}
+      POSTGRES_USER: victor
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-root}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      # Variables para Gunicorn
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
+      GUNICORN_THREADS: ${GUNICORN_THREADS:-2}
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-300}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Variables para AEMET
+      AEMET_API_KEY: ${AEMET_API_KEY:-}
+      AEMET_DEFAULT_STATION: ${AEMET_DEFAULT_STATION:-2614}
+      AEMET_SYNC_INTERVAL: ${AEMET_SYNC_INTERVAL:-3600}
+      MQTT_HOST: ${MQTT_HOST:-mqtt}
+      MQTT_PORT: ${MQTT_PORT:-8883}
+      MQTT_USERNAME: ${MQTT_BRIDGE_USER:-bridge}
+      MQTT_PASSWORD: ${MQTT_BRIDGE_PASSWORD}
+      MQTT_TLS_CA_CERT: ${MQTT_TLS_CA_CERT:-/app/certs/mqtt-ca.pem}
+      # Variables para Firebase Cloud Messaging (FCM)
+      FIREBASE_CREDENTIALS_PATH: ${FIREBASE_CREDENTIALS_PATH:-/app/firebase-adminsdk.json}
+    restart: always
+    volumes:
+      - static-data:/app/staticfiles
+      - media-data:/app/media
+      - ./firebase-adminsdk.json:/app/firebase-adminsdk.json:ro
+      - ./certs:/app/certs:ro
+
+    networks:
+      - esp32-network
+    healthcheck:
+      test: ["CMD", "python", "manage.py", "check", "--database", "default"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  nginx:
+    image: nginx:alpine
+    container_name: esp32-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-ssl.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/ssl:ro
+      - static-data:/app/staticfiles:ro
+      - media-data:/app/media:ro
+      - nextjs-data:/app/nextjs:ro
+    depends_on:
+      web:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+    networks:
+      - esp32-network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.nextjs
+      args:
+        # Firebase Cloud Messaging (FCM) - Build time configuration
+        NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY}
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-riego-esp32-fcm.firebaseapp.com}
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID:-riego-esp32-fcm}
+        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:-riego-esp32-fcm.firebasestorage.app}
+        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:-629937244404}
+        NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID}
+        # Push Notifications VAPID Key
+        NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+    container_name: esp32-frontend-next
+    expose:
+      - "3000"
+    depends_on:
+      web:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: 1
+      NEXT_PUBLIC_API_URL: https://riegoesp32.victorfg.work
+      INTERNAL_API_URL: http://web:8000
+    restart: always
+    volumes:
+      - nextjs-data:/app/.next:ro
+    networks:
+      - esp32-network
+    # Limites de recursos para evitar que consuma demasiado
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    # Usar el healthcheck definido en Dockerfile.nextjs (más confiable)
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  mqtt-bridge:
+    build:
+      context: .
+      target: backend
+    container_name: esp32-mqtt-bridge
+    depends_on:
+      db:
+        condition: service_healthy
+      mqtt:
+        condition: service_started
+    environment:
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-False}
+      SECRET_KEY: ${DJANGO_SECRET_KEY}
+      POSTGRES_DB: ${POSTGRES_DB:-esp32db}
+      POSTGRES_USER: victor
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-root}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      MQTT_HOST: ${MQTT_HOST:-mqtt}
+      MQTT_PORT: ${MQTT_PORT:-8883}
+      MQTT_USERNAME: ${MQTT_BRIDGE_USER:-bridge}
+      MQTT_PASSWORD: ${MQTT_BRIDGE_PASSWORD}
+      MQTT_TLS_CA_CERT: ${MQTT_TLS_CA_CERT:-/app/certs/mqtt-ca.pem}
+    restart: always
+    entrypoint: ["python", "manage.py", "mqtt_bridge"]
+    command: []
+    networks:
+      - esp32-network
+    volumes:
+      - ./certs:/app/certs:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: esp32-cloudflared
+    restart: always
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TOKEN}
+    depends_on:
+      nginx:
+        condition: service_healthy
+    networks:
+      - esp32-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+networks:
+  esp32-network:
+    driver: bridge
+
+volumes:
+  db-data:
+  static-data:
+  media-data:
+  nextjs-data:
+  mosquitto-data:
+  mosquitto-log:

@@ -1,0 +1,21 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fondo degradado -->
+  <rect width="512" height="512" rx="115" fill="url(#gradient)"/>
+  <defs>
+    <linearGradient id="gradient" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4caf50"/>
+      <stop offset="1" stop-color="#2e7d32"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Gota de agua estilizada -->
+  <path d="M256 96C256 96 180 180 180 260C180 302.091 214.101 336 256 336C297.899 336 332 302.091 332 260C332 180 256 96 256 96Z" fill="white" opacity="0.95"/>
+  
+  <!-- Hojas de planta -->
+  <ellipse cx="200" cy="300" rx="60" ry="100" fill="white" opacity="0.9" transform="rotate(-30 200 300)"/>
+  <ellipse cx="312" cy="300" rx="60" ry="100" fill="white" opacity="0.9" transform="rotate(30 312 300)"/>
+  
+  <!-- Detalles de la gota -->
+  <circle cx="240" cy="240" r="15" fill="#4caf50" opacity="0.4"/>
+  <circle cx="265" cy="270" r="10" fill="#4caf50" opacity="0.3"/>
+</svg>

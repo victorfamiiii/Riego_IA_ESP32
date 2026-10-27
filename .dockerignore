@@ -1,0 +1,35 @@
+# Ignorar directorios grandes de frontend
+frontend-nextjs/node_modules
+frontend-nextjs/.next
+frontend-nextjs/out
+frontend-nextjs/.turbo
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Django
+*.log
+db.sqlite3
+staticfiles/
+mediafiles/
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
